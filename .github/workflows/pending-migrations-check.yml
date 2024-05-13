@@ -1,0 +1,46 @@
+name: Prisma Migration Status Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  migration-check:
+    name: Check Prisma Migration Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install Dependencies
+        run: npm install --frozen-lockfile
+
+      - name: Check Prisma Migration
+        id: migration_status
+        run: |
+          if ! npx prisma migrate status; then
+            echo "::set-output name=status::pending"
+          else
+            echo "::set-output name=status::synced"
+          fi
+
+      - name: Proceed if Synced
+        if: steps.migration_status.outputs.status == 'synced'
+        run: |
+          echo "Database is in sync with Prisma schema. Ready to deploy."
+          # You can add steps here to proceed with your deployment,
+          # For example:
+          # npx prisma migrate deploy
+
+      - name: Block Deployment if not Synced
+        if: steps.migration_status.outputs.status == 'pending'
+        run: |
+          echo "Database is out of sync with Prisma schema. Migration needed."
+          exit 1
