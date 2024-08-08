@@ -110,8 +110,16 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/llamaworkspace:latest
           platforms: linux/amd64,linux/arm64
 
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+
       - name: Create GitHub tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.TAG_EXISTS == 'false'
         id: create_tag
         run: |
           git config --global user.name "github-actions[bot]"
